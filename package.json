@@ -1,0 +1,12 @@
+{
+  "name": "workout-ai",
+  "private": true,
+  "workspaces": ["backend", "mobile"],
+  "scripts": {
+    "backend:dev": "npm run dev -w backend",
+    "backend:test": "npm test -w backend",
+    "backend:build": "npm run build -w backend",
+    "mobile:start": "npm start -w mobile",
+    "test": "npm test -w backend"
+  }
+}
