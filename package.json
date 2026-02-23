@@ -7,6 +7,7 @@
     "backend:test": "npm test -w backend",
     "backend:build": "npm run build -w backend",
     "mobile:start": "npm start -w mobile",
-    "test": "npm test -w backend"
+    "mobile:test": "npm test -w mobile",
+    "test": "npm test -w backend && npm test -w mobile"
   }
 }

@@ -78,3 +78,64 @@ Decisions made during planning and implementation of the Adaptive AI Training Pl
 **Why blank-typescript**: Minimal starting point with TypeScript. No assumptions about navigation or structure. Expo Go allows testing on a physical phone without native build tools.
 
 **Tradeoff**: Navigation, state management, and Garmin BLE communication must all be added manually later.
+
+---
+
+## D005: Watch fetches plan via makeWebRequest() through Garmin Connect Mobile
+
+**Decision**: The watch fetches plan data directly from the backend using `Communications.makeWebRequest()`, routed through Garmin Connect Mobile on the paired phone. No custom phone-to-watch BLE bridge needed.
+
+**Alternatives considered**:
+- Connect IQ Mobile SDK: Build a native phone module that pushes data to the watch over BLE. Requires Expo Development Builds and platform-specific code.
+- Phone app sends plan via BLE: More control over sync timing, but requires custom BLE protocol implementation now.
+
+**Why makeWebRequest()**: Available since API 1.3.0 (well within FR245M's 3.3.0). Lets the watch make HTTP requests to any HTTPS endpoint through the paired phone's internet connection. No phone app code needed for data sync. Proves end-to-end data flow with minimal complexity.
+
+**Tradeoff**: Requires the phone to have Garmin Connect Mobile running and paired. Response size limited by BLE bandwidth (~50KB practical). Phone app cannot push data proactively to the watch.
+
+---
+
+## D006: Simplified auth — JWT with hardcoded test user
+
+**Decision**: Use JWT Bearer tokens for the mobile app API and a simple API key query parameter for the watch endpoint. Single hardcoded test user for milestone 1.
+
+**Alternatives considered**:
+- Full OAuth2/OIDC: Production-grade but massive scope increase for a milestone that proves data flow.
+- Session cookies: Don't work well with mobile apps or watch HTTP requests.
+- No auth at all: Insecure even for development. Someone scanning ngrok URLs could access the endpoint.
+
+**Why simplified JWT**: Proves the auth flow works (login → token → authenticated request) without registration UI or password reset. The watch uses an API key because Monkey C has limited header management.
+
+**Tradeoff**: No user registration, no token refresh, no proper device-level auth for the watch. Must be replaced before any multi-user scenario.
+
+---
+
+## D007: Raw SQL migrations with pg driver, no ORM
+
+**Decision**: Write database migrations as raw `.sql` files executed by a simple TypeScript runner using the `pg` driver directly.
+
+**Alternatives considered**:
+- Prisma: Full ORM with migration generation, type safety, and schema management. Adds significant dependency weight and abstracts away SQL.
+- TypeORM/Drizzle: Lighter ORMs but still add abstraction layers and migration frameworks.
+- Knex: Query builder with migration system. Middle ground but still an abstraction.
+
+**Why raw SQL + pg**: The schema is simple (4 tables). Raw SQL is transparent, portable, and requires no ORM-specific knowledge. The `pg` driver is the standard PostgreSQL client for Node.js. Migrations are plain files that can be reviewed and understood by anyone.
+
+**Tradeoff**: No automatic TypeScript type generation from schema. Must manually keep `types.ts` in sync with SQL. No query builder safety net for complex queries.
+
+---
+
+## D008: Use ngrok to expose backend over HTTPS for watch development
+
+**Decision**: Use ngrok to create an HTTPS tunnel to the local backend for watch-to-backend communication during development.
+
+**Alternatives considered**:
+- Deploy to cloud: Production-like but slow iteration cycle. Overkill for development.
+- Cloudflare Tunnel: Free but more setup complexity than ngrok.
+- Local network: The watch can't reach local IPs directly — it routes through Garmin Connect Mobile which requires public HTTPS.
+
+**Why ngrok**: One command (`ngrok http 3000`) creates a public HTTPS URL. The watch's `makeWebRequest()` requires HTTPS, and ngrok provides it with zero configuration.
+
+**Tradeoff**: Free ngrok URLs change on restart (must update watch code constant). Paid ngrok offers custom domains. Acceptable for development.
+
+**Future investigation**: A self-hosted dev tunnel (e.g., reverse SSH tunnel or a lightweight proxy like frp/rathole on a personal VPS) could replace ngrok entirely. This would give a stable custom domain, avoid ngrok rate limits, and remove the third-party dependency — worth exploring if ngrok friction becomes a bottleneck.

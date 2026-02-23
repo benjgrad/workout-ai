@@ -13,6 +13,12 @@ class WorkoutAIApp extends Application.AppBase {
     }
 
     function getInitialView() {
-        return [new WorkoutAIView(), new WorkoutAIDelegate()];
+        if (PlanStorage.hasPlan()) {
+            return [new PlanListView(), new PlanListDelegate()];
+        }
+        var view = new WorkoutAIView();
+        var delegate = new WorkoutAIDelegate();
+        delegate.setView(view);
+        return [view, delegate];
     }
 }
